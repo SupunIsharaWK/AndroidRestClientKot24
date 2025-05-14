@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
+import android.os.Handler
 import android.util.Log
 import com.supunishara.restclientkot24.Request.Companion.addHeader
 import com.supunishara.restclientkot24.Request.Companion.getBodyType
@@ -37,27 +38,42 @@ import com.supunishara.restclientkot24.callbacks.ResponseCallbacks
 import com.supunishara.restclientkot24.configs.ConfigBuilder
 import com.supunishara.restclientkot24.data_classes.CacheData
 import com.supunishara.restclientkot24.data_classes.Header
+import com.supunishara.restclientkot24.exceptions.ConnectionException
 import com.supunishara.restclientkot24.exceptions.RestClientException
 import com.supunishara.restclientkot24.helpers.DatabaseHelper.Companion.getInstance
 import okhttp3.Cache
 import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.CookieJar
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.io.IOException
+import java.io.InputStreamReader
+import java.net.ConnectException
+import java.net.MalformedURLException
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.text.SimpleDateFormat
+import java.util.Arrays
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import java.util.zip.GZIPInputStream
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 class RestClient {
@@ -86,6 +102,9 @@ class RestClient {
     private var debugPrintHeaders = false
     private var debugPrintTimes = false
     private var forceGzipDecode = false
+    private var trustManagerFactory: TrustManagerFactory? = null
+    private var trustManagers: TrustManager? = null
+    private var sslSocketFactory: SSLSocketFactory? = null
 
     constructor(context: Context, request: Request, callbacks: ResponseCallbacks) {
         try {
@@ -143,15 +162,15 @@ class RestClient {
 
                 client = builder.build()
             }
-            builder = client!!.newBuilder()
+            builder = OkHttpClient.Builder() //client!!.newBuilder()
             builder.connectTimeout(config!!.connectTimeout.toLong(), TimeUnit.SECONDS)
             builder.readTimeout(config!!.readTimeout.toLong(), TimeUnit.SECONDS)
             builder.writeTimeout(config!!.writeTimeout.toLong(), TimeUnit.SECONDS)
-            if (getDefaultHeaders(this.request!!) !== 2 && config!!.headers != null && config!!.headers!!.size > 0) {
-                val var10: Iterator<*> = config!!.headers!!.iterator()
+            if (getDefaultHeaders(this.request!!) != 2 && config!!.headers != null && config!!.headers!!.size > 0) {
+                val it: Iterator<*> = config!!.headers!!.iterator()
 
-                while (var10.hasNext()) {
-                    val header = var10.next() as Header
+                while (it.hasNext()) {
+                    val header = it.next() as Header
                     addHeader(request, header, false)
                 }
             }
@@ -167,10 +186,37 @@ class RestClient {
                 }
             }
 
-            if (config!!.sslSocketFactory != null) {
-                val sslSocketFactory = config!!.sslSocketFactory
-                if (sslSocketFactory != null) {
-                    builder.sslSocketFactory(sslSocketFactory)
+            this.trustManagerFactory =
+                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+            if (trustManagerFactory != null) {
+                this.trustManagerFactory!!.init(null as KeyStore?)
+                val trustManagers = trustManagerFactory!!.trustManagers
+                if (trustManagers.size != 1 || trustManagers[0] !is X509TrustManager) {
+                    throw IllegalStateException(
+                        "Unexpected default trust managers: ${
+                            Arrays.toString(
+                                trustManagers
+                            )
+                        }"
+                    )
+                }
+
+                val trustManager = trustManagers[0] as X509TrustManager
+                val sslContext = SSLContext.getInstance("TLS")
+                sslContext.init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
+                sslSocketFactory = sslContext.socketFactory
+                if (config!!.sslSocketFactory != null) {
+                    val sslSocketFactory = config!!.sslSocketFactory
+                    if (sslSocketFactory != null) {
+                        builder.sslSocketFactory(
+                            sslSocketFactory = sslSocketFactory,
+                            trustManager = trustManager
+                        )
+                    }
+                }
+
+                if (getSslSocketFactory(request) != null) {
+                    builder.sslSocketFactory(sslSocketFactory!!, trustManager = trustManager)
                 }
             }
 
@@ -194,15 +240,11 @@ class RestClient {
                 builder.hostnameVerifier(getHostnameVerifier(request)!!)
             }
 
-            if (getSslSocketFactory(request) != null) {
-                builder.sslSocketFactory(getSslSocketFactory(request)!!)
-            }
-            if (getResponseCachingStatus(request) == 0) {
-                this.enableResponseCaching = config!!.enableResponseCaching
-            } else if (getResponseCachingStatus(request) == 1) {
-                this.enableResponseCaching = true
-            } else if (getResponseCachingStatus(request) == 2) {
-                this.enableResponseCaching = false
+            enableResponseCaching = when (getResponseCachingStatus(request)) {
+                0 -> config!!.enableResponseCaching
+                1 -> true
+                2 -> false
+                else -> config!!.enableResponseCaching
             }
 
             if (getResponseCacheTimeout(request) > -1) {
@@ -211,28 +253,25 @@ class RestClient {
                 this.responseCacheTimeout = config!!.responseCacheTimeout
             }
 
-            if (getDebugPrintInfo(request) == 0) {
-                this.debugPrintInfo = config!!.debugPrintInfo
-            } else if (getDebugPrintInfo(request) == 1) {
-                this.debugPrintInfo = true
-            } else if (getDebugPrintInfo(request) == 2) {
-                this.debugPrintInfo = false
+            debugPrintInfo = when (getDebugPrintInfo(request)) {
+                0 -> config!!.debugPrintInfo
+                1 -> true
+                2 -> false
+                else -> config!!.debugPrintInfo
             }
 
-            if (getDebugPrintHeaders(request) == 0) {
-                this.debugPrintHeaders = config!!.debugPrintHeaders
-            } else if (getDebugPrintHeaders(request) == 1) {
-                this.debugPrintHeaders = true
-            } else if (getDebugPrintHeaders(request) == 2) {
-                this.debugPrintHeaders = false
+            debugPrintHeaders = when (getDebugPrintHeaders(request)) {
+                0 -> config!!.debugPrintHeaders
+                1 -> true
+                2 -> false
+                else -> config!!.debugPrintHeaders
             }
 
-            if (getDebugPrintTimes(request) == 0) {
-                this.debugPrintTimes = config!!.debugPrintTimes
-            } else if (getDebugPrintTimes(request) == 1) {
-                this.debugPrintTimes = true
-            } else if (getDebugPrintTimes(request) == 2) {
-                this.debugPrintTimes = false
+            debugPrintTimes = when (getDebugPrintTimes(request)) {
+                0 -> config!!.debugPrintTimes
+                1 -> true
+                2 -> false
+                else -> config!!.debugPrintTimes
             }
 
             this.forceGzipDecode = isForceGzipDecode(request)
@@ -280,7 +319,10 @@ class RestClient {
             val sslContext = SSLContext.getInstance("SSL")
             sslContext.init(null, trustManager, SecureRandom())
             val sslSocketFactory = sslContext.socketFactory
-            builder.sslSocketFactory(sslSocketFactory = sslSocketFactory)
+            builder.sslSocketFactory(
+                sslSocketFactory = sslSocketFactory,
+                trustManager = trustManager[1] as X509TrustManager
+            )
             builder.hostnameVerifier(HostnameVerifier { hostname, session -> true })
         } catch (t: Throwable) {
             t.printStackTrace()
@@ -405,7 +447,7 @@ class RestClient {
 
     }
 
-    fun execute(): Call {
+    fun execute(): Call? {
         val response: Response = Response()
         response.setRequest(request)
         if (enableResponseCaching) {
@@ -673,69 +715,237 @@ class RestClient {
                             }
                         }
                     }
+                }
 
-                    val httpRequest: okhttp3.Request = builder.build()
-                    if (debugPrintInfo) {
-                        val method: String = httpRequest.method
-                        this.log("Request: " + method + " " + httpRequest.url.toString())
-                        if ((method.equals("post", true)) or
-                            (method.equals("put", true)) or
-                            (method.equals("patch", true)) or
-                            (method.equals("delete", true))
-                        ) {
-                            var count: Int
-                            var body: String
-                            var i: Int
-                            when (processedBodyType) {
-                                Request.BodyType.EMPTY -> log("Request Body: Empty")
-                                Request.BodyType.X_FORM_URL_ENCODED -> {
-                                    try {
-                                        count = getFormBody(request!!)!!.size
-                                        body = ""
-                                        i = 0
-                                        while (i < count) {
-                                            body = (body + getFormBody(request!!)!!
-                                                .name(i)) + " : " + getFormBody(request!!)!!
-                                                .value(i)
-                                            ++i
-                                        }
-                                        log("Request Body: Form body : " + body.trim())
-                                    } catch (t: Throwable) {
-                                        log("Request Body: Form body")
-                                        t.printStackTrace()
+                val httpRequest: okhttp3.Request = builder.build()
+                if (debugPrintInfo) {
+                    val method: String = httpRequest.method
+                    this.log("Request: " + method + " " + httpRequest.url.toString())
+                    if ((method.equals("post", true)) or
+                        (method.equals("put", true)) or
+                        (method.equals("patch", true)) or
+                        (method.equals("delete", true))
+                    ) {
+                        var count: Int
+                        var body: String
+                        var i: Int
+                        when (processedBodyType) {
+                            Request.BodyType.EMPTY -> log("Request Body: Empty")
+                            Request.BodyType.X_FORM_URL_ENCODED -> {
+                                try {
+                                    count = getFormBody(request!!)!!.size
+                                    body = ""
+                                    i = 0
+                                    while (i < count) {
+                                        body = (body + getFormBody(request!!)!!
+                                            .name(i)) + " : " + getFormBody(request!!)!!
+                                            .value(i)
+                                        ++i
                                     }
-                                }
-
-                                Request.BodyType.MULTIPART -> {
-                                    try {
-                                        count = getMultipartBody(request!!)!!.parts.size
-                                        body = ""
-                                        i = 0
-                                        while (i < count) {
-                                            body = (body + getMultipartBody(request!!)!!.part(i)
-                                                    + " : " + getMultipartBody(request!!)!!.part(i))
-                                            ++i
-                                        }
-                                        log("Request Body: Multipart Body : " + body.trim())
-                                    } catch (t: Throwable) {
-                                        log("Request Body: Multipart Body")
-                                        t.printStackTrace()
-                                    }
-                                }
-
-                                else -> {
-                                    log("Request Body: " + getRawBody(request!!)!!)
+                                    log("Request Body: Form body : " + body.trim())
+                                } catch (t: Throwable) {
+                                    log("Request Body: Form body")
+                                    t.printStackTrace()
                                 }
                             }
 
+                            Request.BodyType.MULTIPART -> {
+                                try {
+                                    count = getMultipartBody(request!!)!!.parts.size
+                                    body = ""
+                                    i = 0
+                                    while (i < count) {
+                                        body = (body + getMultipartBody(request!!)!!.part(i)
+                                                + " : " + getMultipartBody(request!!)!!.part(i))
+                                        ++i
+                                    }
+                                    log("Request Body: Multipart Body : " + body.trim())
+                                } catch (t: Throwable) {
+                                    log("Request Body: Multipart Body")
+                                    t.printStackTrace()
+                                }
+                            }
+
+                            else -> {
+                                log("Request Body: " + getRawBody(request!!)!!)
+                            }
                         }
+
                     }
                 }
+                if (debugPrintHeaders) {
+                    log("Request Headers: " + httpRequest.headers.toMultimap().toString())
+                }
+                call = this.client?.newCall(httpRequest)
+                executionStart = System.currentTimeMillis()
+                call!!.enqueue(object : Callback {
+                    private var call: Call? = null
+                    private var httpResponse: okhttp3.Response? = null
+                    var handler: Handler? = null
 
+                    init {
+                        this.handler = Handler(context!!.mainLooper)
+                    }
+
+                    override fun onFailure(call: Call, exception: IOException) {
+                        log("Failed: $exception")
+                        if (debugPrintTimes) {
+                            val executionTime =
+                                System.currentTimeMillis() - executionStart
+                            log("Execution Time: " + executionTime + "ms")
+                        }
+
+                        val rex: RestClientException
+                        when (exception) {
+                            is SocketTimeoutException -> {
+                                rex = ConnectionException(-6, "Socket timeout", exception)
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+
+                            is SocketException -> {
+                                rex = ConnectionException(-10, exception.message!!, exception)
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+
+                            is UnknownHostException -> {
+                                rex = ConnectionException(
+                                    -7,
+                                    "Unknown host. " + exception.message,
+                                    exception
+                                )
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+
+                            is MalformedURLException -> {
+                                rex = ConnectionException(-8, exception.message!!, exception)
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+
+                            is ConnectException -> {
+                                rex = ConnectionException(-9, exception.message!!, exception)
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+
+                            else -> {
+                                rex = RestClientException(-1, exception.message!!, exception)
+                                response.setException(rex)
+                                response.setCall(call)
+                            }
+                        }
+                        if (debugPrintInfo) {
+                            log("Failed: " + rex.message)
+                        }
+
+                        handler!!.post {
+                            if (callback != null) {
+                                callback!!.onResponseReceive(response)
+                            }
+                        }
+                    }
+
+                    @Throws(IOException::class)
+                    override fun onResponse(call: Call, httpResponse: okhttp3.Response) {
+                        this.call = call
+                        this.httpResponse = httpResponse
+                        if (debugPrintTimes) {
+                            val executionTime =
+                                System.currentTimeMillis() - executionStart
+                            log("Execution Time: " + executionTime + "ms")
+                        }
+
+                        if (forceGzipDecode) {
+                            val gzipInputStream = GZIPInputStream(
+                                httpResponse.body!!.byteStream()
+                            )
+                            val reader = InputStreamReader(gzipInputStream)
+                            val br = BufferedReader(reader)
+                            val builder = StringBuilder()
+
+                            var inputLine: String?
+                            while ((br.readLine().also { inputLine = it }) != null) {
+                                builder.append(inputLine)
+                            }
+
+                            response.setResponseBody(builder.toString())
+                        } else {
+                            try {
+                                response.setResponseBody(httpResponse.body!!.string())
+                            } catch (var8: java.lang.Exception) {
+                                response.setResponseBody(null)
+                            }
+                        }
+
+                        response.setResponse(httpResponse)
+                        response.setCall(call)
+                        if (debugPrintInfo) {
+                            log(("Response Code: " + response.getStatusCode()).toString() + " " + response.getStatusMessage())
+                        }
+
+                        if (debugPrintHeaders) {
+                            log("Response Headers: " + response.getHeaders().toString())
+                        }
+
+                        if (debugPrintInfo) {
+                            log("Response Body: " + response.getResponseBody())
+                        }
+
+                        try {
+                            if (enableResponseCaching && response.isSuccessful() && (response.getResponseBody()
+                                    .isNotEmpty())
+                            ) {
+                                val method: String = when (getMethod(request!!)) {
+                                    GET -> "get"
+                                    POST -> "post"
+                                    DELETE -> "delete"
+                                    PUT -> "put"
+                                    PATCH -> "patch"
+                                    null -> null.toString()
+                                }
+                                val cacheData = CacheData(
+                                    url = getHttpUrl(request!!).toString(),
+                                    method = method,
+                                    data = response.getResponseBody(),
+                                    timeout = responseCacheTimeout,
+                                    createdAt = System.currentTimeMillis(),
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                val result: Int = getInstance(context).addCacheEntry(cacheData)
+                                if (debugPrintInfo) {
+                                    log("Response Cache Saved: $result")
+                                }
+                            }
+                        } catch (t: Throwable) {
+                            if (debugPrintInfo) {
+                                log("Response Cache Error: " + t.message)
+                            }
+                        }
+
+                        handler!!.post {
+                            if (callback != null) {
+                                callback!!.onResponseReceive(response)
+                            }
+                        }
+                    }
+                })
             } catch (t: Throwable) {
                 t.printStackTrace()
+                response.setException(RestClientException(-1, t.message.toString(), t))
+                callback?.onResponseReceive(response)
             }
+        } else {
+            if (debugPrintInfo) {
+                log("Not connected to internet")
+            }
+            val exception: RestClientException =
+                ConnectionException(-4, "Not connected to internet")
+            response.setException(exception = exception)
+            callback?.onResponseReceive(response)
         }
-
+        return this.call
     }
 }

@@ -306,7 +306,7 @@ class Request {
         }
 
         fun setJSONString(request: Request, data: String?) {
-            if (data != null && data.length > 0) {
+            if (!data.isNullOrEmpty()) {
                 request.rawBody = data
                 request.bodyType = BodyType.JSON
                 Companion.addHeader(
@@ -376,7 +376,7 @@ class Request {
         }
 
         fun setPlainText(request: Request, data: String?) {
-            if (data != null && data.length > 0) {
+            if (!data.isNullOrEmpty()) {
                 request.rawBody = data
                 request.bodyType = BodyType.TEXT
                 Companion.addHeader(request, Header("Content-Type", "text/plain; charset=utf-8"))
