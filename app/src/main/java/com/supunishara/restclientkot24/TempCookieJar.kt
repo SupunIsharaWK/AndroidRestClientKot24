@@ -20,6 +20,13 @@ class TempCookieJar : CookieJar {
         return ((cookies ?: ArrayList<Any?>()) as List<Cookie>)
     }
 
+    fun getTempCookieJar(): TempCookieJar? {
+        if (tempCookieJar == null) {
+            tempCookieJar = TempCookieJar()
+        }
+        return tempCookieJar
+    }
+
     companion object {
         fun getInstance(): Any {
             return tempCookieJar

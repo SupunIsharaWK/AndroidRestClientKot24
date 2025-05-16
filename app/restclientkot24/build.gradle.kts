@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "com.supunishara.restclientkot24"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
+        targetSdk = 35
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
+        // No applicationId for library module
     }
 
     buildTypes {
@@ -23,22 +23,32 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    buildToolsVersion = "35.0.0"
+    ndkVersion = "27.1.12297006"
 }
 
 dependencies {
-
+    // Core and UI libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    implementation (libs.okhttp)
+
+    // Networking
+    implementation(libs.okhttp)
+
+    // Unit Testing
+    testImplementation(libs.junit.jupiter) // JUnit 5 (Jupiter)
+    testImplementation(libs.kotlinx.coroutines.test) // Coroutines test library
+    testImplementation(libs.mockito.core) // Mockito for mocking
+    testImplementation(libs.mockk) // Mockk for mocking in tests
 }

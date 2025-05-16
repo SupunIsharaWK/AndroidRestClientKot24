@@ -1,5 +1,7 @@
 package com.supunishara.restclientkot24
 
+import com.supunishara.restclientkot24.Request
+
 import com.supunishara.restclientkot24.data_classes.CacheData
 import com.supunishara.restclientkot24.exceptions.RestClientException
 import okhttp3.Call
@@ -8,6 +10,7 @@ import okhttp3.Response
 class Response {
     private var request: Request? = null
     private var responseBody = ""
+    private var responseCode = 0
     private var httpResponse: Response? = null
     private var call: Call? = null
     private var exception: RestClientException? = null
@@ -21,8 +24,29 @@ class Response {
         httpResponse: Response?,
         call: Call?,
         exception: RestClientException?,
-        cacheData: CacheData?,
-    )
+        cacheData: CacheData?
+    ) {
+        this.request = request
+        this.responseBody = responseBody ?: ""
+        this.httpResponse = httpResponse
+        this.call = call
+        this.exception = exception
+        this.cacheData = cacheData
+    }
+
+    constructor(
+        request: Request?,
+        responseBody: String?,
+        httpResponse: Response?,
+        call: Call?,
+        exception: RestClientException?
+    ) {
+        this.request = request
+        this.responseBody = responseBody ?: ""
+        this.httpResponse = httpResponse
+        this.call = call
+        this.exception = exception
+    }
 
     fun getRequest(): Request? {
         return this.request

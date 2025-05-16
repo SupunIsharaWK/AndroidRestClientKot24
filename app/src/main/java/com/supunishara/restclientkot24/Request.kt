@@ -94,7 +94,7 @@ class Request {
         this.method = method
     }
 
-    constructor(httpUrl: HttpUrl?, method: Method?) {
+    constructor(url: HttpUrl, method: Method) {
         this.bodyType = BodyType.EMPTY
         this.connectTimeout = 0
         this.readTimeout = 0
@@ -107,7 +107,7 @@ class Request {
         this.debugPrintTimes = 0
         this.defaultHeaders = 0
         this.forceGzipDecode = false
-        this.httpUrl = httpUrl!!
+        this.httpUrl = url
         this.method = method
     }
 
@@ -394,6 +394,10 @@ class Request {
                 request.headers = mutableListOf()
             }
             return request.headers
+        }
+
+        fun disableGzipDecode(request: Request) {
+            request.forceGzipDecode = false
         }
     }
 }

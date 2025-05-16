@@ -276,7 +276,7 @@ class RestClient {
 
             this.forceGzipDecode = isForceGzipDecode(request)
             client = builder.build()
-            this.requestId = dateFormatRequestId.format(Date()) + getRequestCount()
+            this.requestId = dateFormatRequestId.format(Date()) + requestCount
             if (this.debugPrintInfo) {
                 this.log("RestClient initialized... Version" + context.getString(R.string.version))
             }
@@ -285,16 +285,7 @@ class RestClient {
         }
     }
 
-    fun setConfig(config: RestClientConfig) {
-        this.config = config
-    }
-
-    fun getRequestCount(): Int {
-        ++requestCount
-        return requestCount
-    }
-
-    private fun enableTrustAllCert(builder: OkHttpClient.Builder): OkHttpClient.Builder {
+    fun enableTrustAllCert(builder: OkHttpClient.Builder): OkHttpClient.Builder {
         try {
             val trustManager = arrayOf<TrustManager>(@SuppressLint("CustomX509TrustManager")
             object : X509TrustManager {
@@ -410,7 +401,7 @@ class RestClient {
         }
     }
 
-    private fun log(message: String) {
+    fun log(message: String) {
         Log.d("RestClientKot24:ReqId=" + this.requestId, message)
         if (this.logDirectory != null) {
             if (!logDirectory!!.exists()) {
