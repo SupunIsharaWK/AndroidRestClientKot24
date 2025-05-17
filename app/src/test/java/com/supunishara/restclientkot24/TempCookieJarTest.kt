@@ -1,65 +1,59 @@
 package com.supunishara.restclientkot24
 
-import com.supunishara.restclientkot24.TempCookieJar.Companion.getInstance
 import okhttp3.Cookie
 import okhttp3.HttpUrl
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
-import org.mockito.Mockito.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TempCookieJarTest {
 
-    private lateinit var tempCookieJar: TempCookieJar
-    private lateinit var mockUrl: HttpUrl
-    private lateinit var mockCookie: Cookie
-    private lateinit var cookieList: List<Cookie>
+    private lateinit var url: HttpUrl
+    private lateinit var cookie: Cookie
 
-    @BeforeEach
-    fun setUp() {
-        tempCookieJar = getInstance() as TempCookieJar
-        mockUrl = mock(HttpUrl::class.java)
-        mockCookie = mock(Cookie::class.java)
-        cookieList = listOf(mockCookie)
-    }
-
-    @AfterEach
-    fun tearDown() {
-        // No cleanup needed currently
+    @Before
+    fun setup() {
+        url = "https://example.com".toHttpUrlOrNull()!!
+        cookie = Cookie.Builder()
+            .name("session")
+            .value("abc123")
+            .domain("example.com")
+            .build()
     }
 
     @Test
-    fun `saveFromResponse should store cookies for given URL`() {
-        `when`(mockUrl.host).thenReturn("example.com")
+    fun testSaveAndLoadCookies() {
+        TempCookieJar.saveFromResponse(url, listOf(cookie))
 
-        tempCookieJar.saveFromResponse(mockUrl, cookieList)
-
-        val savedCookies = tempCookieJar.loadForRequest(mockUrl)
-        assertEquals(cookieList, savedCookies)
+        val loadedCookies = TempCookieJar.loadForRequest(url)
+        assertNotNull(loadedCookies)
+        assertEquals(1, loadedCookies.size)
+        assertEquals("session", loadedCookies[0].name)
+        assertEquals("abc123", loadedCookies[0].value)
     }
 
     @Test
-    fun `loadForRequest should retrieve previously stored cookies`() {
-        `when`(mockUrl.host).thenReturn("example.com")
-        tempCookieJar.saveFromResponse(mockUrl, cookieList)
-
-        val retrievedCookies = tempCookieJar.loadForRequest(mockUrl)
-        assertEquals(cookieList, retrievedCookies)
+    fun testLoadForRequestReturnsEmptyIfNoCookiesSaved() {
+        val newUrl = "https://another.com".toHttpUrlOrNull()!!
+        val cookies = TempCookieJar.loadForRequest(newUrl)
+        assertNotNull(cookies)
+        assertTrue(cookies.isEmpty())
     }
 
     @Test
-    fun `loadForRequest should return empty list when no cookies found`() {
-        `when`(mockUrl.host).thenReturn("unknown.com")
+    fun testCookiesAreOverwrittenForSameHost() {
+        val newCookie = Cookie.Builder()
+            .name("session")
+            .value("xyz789")
+            .domain("example.com")
+            .build()
 
-        val retrievedCookies = tempCookieJar.loadForRequest(mockUrl)
-        assertTrue(retrievedCookies.isEmpty())
-    }
+        TempCookieJar.saveFromResponse(url, listOf(cookie))
+        TempCookieJar.saveFromResponse(url, listOf(newCookie)) // overwrite
 
-    @Test
-    fun `getInstance should return the same singleton instance`() {
-        val instance1 = TempCookieJar.getInstance()
-        val instance2 = TempCookieJar.getInstance()
-
-        assertSame(instance1, instance2)
+        val cookies = TempCookieJar.loadForRequest(url)
+        assertEquals(1, cookies.size)
+        assertEquals("xyz789", cookies[0].value)
     }
 }

@@ -2,193 +2,96 @@ package com.supunishara.restclientkot24
 
 import com.supunishara.restclientkot24.data_classes.CacheData
 import com.supunishara.restclientkot24.exceptions.RestClientException
-import okhttp3.Call
+import okhttp3.Headers
+import okhttp3.Protocol
 import okhttp3.Response as OkHttpResponse
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ResponseTest {
 
-    private lateinit var mockRequest: Request
-    private lateinit var mockResponse: OkHttpResponse
-    private lateinit var mockCall: Call
-    private lateinit var mockException: RestClientException
-    private lateinit var mockCacheData: CacheData
-    private lateinit var response: Response
+ private lateinit var response: Response
 
-    @BeforeEach
-    fun setup() {
-        mockRequest = mock(Request::class.java)
-        mockResponse = mock(OkHttpResponse::class.java)
-        mockCall = mock(Call::class.java)
-        mockException = mock(RestClientException::class.java)
-        mockCacheData = mock(CacheData::class.java)
-    }
+ @Before
+ fun setUp() {
+  response = Response()
+ }
 
-    @Test
-    fun `Response constructor with valid arguments sets correct values`() {
-        `when`(mockResponse.code).thenReturn(200)
-        `when`(mockResponse.message).thenReturn("OK")
-        `when`(mockCacheData.data).thenReturn("Cache Data")
+ @Test
+ fun testDefaultValues() {
+  assertFalse(response.isSuccessful)
+  assertFalse(response.isExecuted)
+  assertFalse(response.isException)
+  assertFalse(response.isCache)
+  assertEquals("", response.responseBody)
+  assertEquals(0, response.statusCode)
+  assertEquals("Unknown response", response.statusMessage)
+ }
 
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            mockCacheData
-        )
+ @Test
+ fun testWithException() {
+  val exception = RestClientException(-1, "Simulated failure")
+  response.exception = exception
 
-        assertEquals(200, response.getStatusCode())
-        assertEquals("OK", response.getStatusMessage())
-        Assertions.assertNotNull(response.getHeaders())
-        assertTrue(response.isCache())
-    }
+  assertTrue(response.isException)
+  assertEquals(-1, response.statusCode)
+  assertEquals("com.supunishara.restclientkot24.exceptions.RestClientException: Simulated failure", response.statusMessage)
+ }
 
-    @Test
-    fun `Response constructor with exception sets status correctly`() {
-        `when`(mockException.getErrorCode()).thenReturn(500)
+ @Test
+ fun testWithHttpResponse() {
+  val okhttpResponse = OkHttpResponse.Builder()
+   .code(200)
+   .protocol(Protocol.HTTP_1_1)
+   .message("OK")
+   .request(okhttp3.Request.Builder().url("https://example.com").build())
+   .build()
 
-        response = Response(
-            null,
-            null,
-            null,
-            null,
-            mockException,
-            null
-        )
+  response.httpResponse = okhttpResponse
 
-        assertEquals(500, response.getStatusCode())
-        assertEquals(mockException.toString(), response.getStatusMessage())
-    }
+  assertTrue(response.isSuccessful)
+  assertEquals(200, response.statusCode)
+  assertEquals("OK", response.statusMessage)
+ }
 
-    @Test
-    fun `getHeaders returns valid headers map`() {
-        val headersMap = mapOf("Content-Type" to listOf("application/json"))
-        `when`(mockResponse.headers.toMultimap()).thenReturn(headersMap)
+ @Test
+ fun testHeadersAccess() {
+  val okhttpResponse = OkHttpResponse.Builder()
+   .code(200)
+   .protocol(Protocol.HTTP_1_1)
+   .message("OK")
+   .headers(Headers.headersOf("X-Test", "123", "X-Test", "456"))
+   .request(okhttp3.Request.Builder().url("https://example.com").build())
+   .build()
 
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            null
-        )
+  response.httpResponse = okhttpResponse
+  val headers = response.headers
 
-        val headers = response.getHeaders()
-        Assertions.assertNotNull(headers)
-        assertTrue(headers?.containsKey("Content-Type") == true)
-    }
+  assertNotNull(headers)
+  assertTrue(headers!!.containsKey("X-Test"))
+  assertEquals(2, headers["X-Test"]?.size)
+ }
 
-    @Test
-    fun `getHeaders returns null on exception`() {
-        `when`(mockResponse.headers.toMultimap()).thenThrow(Exception("Header retrieval failed"))
+ @Test
+ fun testCacheDataIntegration() {
+  val cache = CacheData(
+   url = "https://example.com",
+   method = "get",
+   data = "{\"cached\":true}",
+   createdAt = System.currentTimeMillis(),
+   timeout = 5000
+  )
+  response.cacheData = cache
 
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            null
-        )
+  assertTrue(response.isCache)
+  assertTrue(response.isSuccessful)
+  assertEquals("{\"cached\":true}", response.cacheData!!.data)
+ }
 
-        val headers = response.getHeaders()
-        Assertions.assertNull(headers)
-    }
-
-    @Test
-    fun `isSuccessful returns true for successful HTTP response`() {
-        `when`(mockResponse.isSuccessful).thenReturn(true)
-
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            null
-        )
-
-        assertTrue(response.isSuccessful())
-    }
-
-    @Test
-    fun `isSuccessful returns true for cache data`() {
-        response = Response(
-            mockRequest,
-            "Response Body",
-            null,
-            null,
-            null,
-            mockCacheData
-        )
-
-        assertTrue(response.isSuccessful())
-    }
-
-    @Test
-    fun `isExecuted returns true for executed call`() {
-        `when`(mockCall.isExecuted()).thenReturn(true)
-
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            null
-        )
-
-        assertTrue(response.isExecuted())
-    }
-
-    @Test
-    fun `isExecuted returns false for non-executed call`() {
-        `when`(mockCall.isExecuted()).thenReturn(false)
-
-        response = Response(
-            mockRequest,
-            "Response Body",
-            mockResponse,
-            mockCall,
-            null,
-            null
-        )
-
-        assertFalse(response.isExecuted())
-    }
-
-    @Test
-    fun `isException returns true when exception is set`() {
-        response = Response(
-            mockRequest,
-            "Response Body",
-            null,
-            null,
-            mockException,
-            null
-        )
-
-        assertTrue(response.isException())
-    }
-
-    @Test
-    fun `isCache returns false when cache data is null`() {
-        response = Response(
-            mockRequest,
-            "Response Body",
-            null,
-            null,
-            null,
-            null
-        )
-
-        assertFalse(response.isCache())
-    }
+ @Test
+ fun testToStringReturnsBody() {
+  response.responseBody = "This is a body"
+  assertEquals("This is a body", response.toString())
+ }
 }

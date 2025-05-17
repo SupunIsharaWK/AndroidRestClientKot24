@@ -1,172 +1,76 @@
 package com.supunishara.restclientkot24
 
-import com.supunishara.restclientkot24.Request
-
 import com.supunishara.restclientkot24.data_classes.CacheData
 import com.supunishara.restclientkot24.exceptions.RestClientException
 import okhttp3.Call
-import okhttp3.Response
+import okhttp3.Response as OkHttpResponse
 
-class Response {
-    private var request: Request? = null
-    private var responseBody = ""
+/**
+ * Represents the result of an HTTP request executed by [RestClient].
+ * Holds raw response data, metadata, and error/caching information.
+ */
+class Response(
+    var request: Request? = null,                   // The original request
+    var responseBody: String = "",                  // The raw string body returned from the server
+    var httpResponse: OkHttpResponse? = null,       // OkHttp response object (nullable)
+    var call: Call? = null,                         // OkHttp Call object
+    var exception: RestClientException? = null,     // Any exception encountered during execution
+    var cacheData: CacheData? = null                // Cached response (if applicable)
+) {
+    // Not used in refactored version but retained for compatibility
     private var responseCode = 0
-    private var httpResponse: Response? = null
-    private var call: Call? = null
-    private var exception: RestClientException? = null
-    private var cacheData: CacheData? = null
 
-    constructor()
+    /**
+     * The HTTP status code from the response.
+     * Returns the exception code if a client-side error occurred.
+     */
+    val statusCode: Int
+        get() = exception?.errorCode ?: httpResponse?.code ?: 0
 
-    constructor(
-        request: Request?,
-        responseBody: String?,
-        httpResponse: Response?,
-        call: Call?,
-        exception: RestClientException?,
-        cacheData: CacheData?
-    ) {
-        this.request = request
-        this.responseBody = responseBody ?: ""
-        this.httpResponse = httpResponse
-        this.call = call
-        this.exception = exception
-        this.cacheData = cacheData
-    }
+    /**
+     * The status message from the server or exception message if failed.
+     */
+    val statusMessage: String
+        get() = exception?.toString() ?: httpResponse?.message ?: "Unknown response"
 
-    constructor(
-        request: Request?,
-        responseBody: String?,
-        httpResponse: Response?,
-        call: Call?,
-        exception: RestClientException?
-    ) {
-        this.request = request
-        this.responseBody = responseBody ?: ""
-        this.httpResponse = httpResponse
-        this.call = call
-        this.exception = exception
-    }
+    /**
+     * A map of all headers received in the response.
+     */
+    val headers: Map<String, List<String>>?
+        get() = runCatching { httpResponse?.headers?.toMultimap() }.getOrNull()
 
-    fun getRequest(): Request? {
-        return this.request
-    }
+    /**
+     * Returns the list of header values for the given header [name].
+     */
+    fun headers(name: String): List<String>? =
+        runCatching { httpResponse?.headers?.values(name) }.getOrNull()
 
-    fun setRequest(request: Request?) {
-        this.request = request
-    }
+    /**
+     * Returns true if the response is successful (HTTP 2xx) or comes from cache.
+     */
+    val isSuccessful: Boolean
+        get() = (httpResponse?.isSuccessful ?: false) || cacheData != null
 
-    fun getResponseBody(): String {
-        return this.responseBody
-    }
+    /**
+     * True if the network call has already been executed.
+     */
+    val isExecuted: Boolean
+        get() = call?.isExecuted() ?: false
 
-    fun setResponseBody(responseBody: String?) {
-        if (responseBody != null) {
-            this.responseBody = responseBody
-        }
-    }
+    /**
+     * True if an exception occurred during the request.
+     */
+    val isException: Boolean
+        get() = exception != null
 
-    fun getResponse(): Response? {
-        return this.httpResponse
-    }
+    /**
+     * True if the data was retrieved from a local cache.
+     */
+    val isCache: Boolean
+        get() = cacheData != null
 
-    fun setResponse(httpResponse: Response?) {
-        this.httpResponse = httpResponse
-    }
-
-    fun getCall(): Call? {
-        return this.call
-    }
-
-    fun setCall(call: Call?) {
-        this.call = call
-    }
-
-    fun getException(): Throwable? {
-        return this.exception
-    }
-
-    fun getStatusCode(): Int {
-        return if (this.exception == null) {
-            if (this.httpResponse != null) httpResponse!!.code else 0
-        } else {
-            exception!!.getErrorCode()
-        }
-    }
-
-    fun getStatusMessage(): String {
-        if (this.exception == null) {
-            if (this.httpResponse != null) {
-                return httpResponse!!.message
-            } else {
-                return "Unknown response"
-            }
-        } else {
-            return exception.toString()
-        }
-    }
-
-    fun getHeaders(): Map<String, List<String>>? {
-        return try {
-            httpResponse!!.headers.toMultimap()
-        } catch (var2: java.lang.Exception) {
-            null
-        }
-    }
-
-    fun getHeaders(name: String?): List<String>? {
-        return try {
-            httpResponse!!.headers.values(name!!)
-        } catch (var3: java.lang.Exception) {
-            null
-        }
-    }
-
-    private fun getCacheResponse(): String {
-        return try {
-            if (this.cacheData == null) "" else cacheData!!.data
-        } catch (var2: java.lang.Exception) {
-            ""
-        }
-    }
-
-    fun getCacheData(): CacheData? {
-        return this.cacheData
-    }
-
-    fun setCacheData(cacheData: CacheData?) {
-        this.cacheData = cacheData
-    }
-
-    fun isSuccessful(): Boolean {
-        return if (this.httpResponse != null) {
-            httpResponse!!.isSuccessful
-        } else {
-            cacheData != null
-        }
-    }
-
-    fun isExecuted(): Boolean {
-        return if (this.call == null) false else call!!.isExecuted()
-    }
-
-    fun isException(): Boolean {
-        return this.exception != null
-    }
-
-    fun setException(exception: RestClientException?) {
-        this.exception = exception
-    }
-
-    fun isCache(): Boolean {
-        return try {
-            cacheData != null
-        } catch (var2: java.lang.Exception) {
-            false
-        }
-    }
-
-    override fun toString(): String {
-        return this.getResponseBody()
-    }
+    /**
+     * Returns the body content as string.
+     */
+    override fun toString(): String = responseBody
 }

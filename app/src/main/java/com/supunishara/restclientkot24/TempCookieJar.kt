@@ -4,34 +4,28 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 
+/**
+ * Temporary in-memory cookie store for session-based usage.
+ * This implementation does not persist cookies across app restarts.
+ *
+ * Use only if [RestClientConfig.enableTempCookieJar] is true.
+ */
+object TempCookieJar : CookieJar {
 
-@Suppress("UNCHECKED_CAST")
-class TempCookieJar : CookieJar {
-    private val cookieStore: HashMap<Any?, Any?> = HashMap<Any?, Any?>()
-    private var tempCookieJar: TempCookieJar? = null
+    // Cookie storage mapped by host
+    private val cookieStore: MutableMap<String, List<Cookie>> = mutableMapOf()
 
+    /**
+     * Called by OkHttp after receiving response cookies from server.
+     */
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         cookieStore[url.host] = cookies
     }
 
+    /**
+     * Called before sending a request to attach any stored cookies.
+     */
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val cookies: List<*>? =
-            cookieStore[url.host] as List<*>?
-        return ((cookies ?: ArrayList<Any?>()) as List<Cookie>)
-    }
-
-    fun getTempCookieJar(): TempCookieJar? {
-        if (tempCookieJar == null) {
-            tempCookieJar = TempCookieJar()
-        }
-        return tempCookieJar
-    }
-
-    companion object {
-        fun getInstance(): Any {
-            return tempCookieJar
-        }
-
-        lateinit var tempCookieJar: Any
+        return cookieStore[url.host] ?: emptyList()
     }
 }

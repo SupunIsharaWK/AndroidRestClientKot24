@@ -10,8 +10,6 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 35
-
-        // No applicationId for library module
     }
 
     buildTypes {
@@ -46,9 +44,10 @@ dependencies {
     // Networking
     implementation(libs.okhttp)
 
-    // Unit Testing
-    testImplementation(libs.junit.jupiter) // JUnit 5 (Jupiter)
-    testImplementation(libs.kotlinx.coroutines.test) // Coroutines test library
-    testImplementation(libs.mockito.core) // Mockito for mocking
-    testImplementation(libs.mockk) // Mockk for mocking in tests
+    // ✅ Unit Testing (JUnit 4)
+    testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockk)
+    testImplementation(libs.androidx.test.core)
 }

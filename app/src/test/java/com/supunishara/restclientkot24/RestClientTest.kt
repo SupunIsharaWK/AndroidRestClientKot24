@@ -1,164 +1,137 @@
 package com.supunishara.restclientkot24
 
+import com.supunishara.restclientkot24.Response as ClientResponse
+import okhttp3.Response
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkInfo
-import com.supunishara.restclientkot24.Request.Companion.getHeaders
-import com.supunishara.restclientkot24.Request.Companion.getHttpUrl
-import com.supunishara.restclientkot24.Request.Companion.getMethod
-import com.supunishara.restclientkot24.Request.Method.GET
-import com.supunishara.restclientkot24.callbacks.ResponseCallbacks
-import com.supunishara.restclientkot24.data_classes.CacheData
-import com.supunishara.restclientkot24.exceptions.RestClientException
-import okhttp3.Call
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
+import androidx.test.core.app.ApplicationProvider
+import com.supunishara.restclientkot24.callbacks.MultiResponseCallback
+import com.supunishara.restclientkot24.data_classes.Header
+import com.supunishara.restclientkot24.configs.ConfigBuilder
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.runBlocking
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Before
+import org.junit.Test
 import org.mockito.Mockito.*
-import okhttp3.Response as OkHttpResponse
+import java.io.IOException
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RestClientTest {
 
-    private lateinit var mockContext: Context
-    private lateinit var mockRequest: Request
-    private lateinit var mockCallbacks: ResponseCallbacks
+    private lateinit var client: OkHttpClient
+    private lateinit var call: Call
+    private lateinit var callback: MultiResponseCallback
+    private lateinit var request: Request
     private lateinit var restClient: RestClient
-    private lateinit var mockCacheData: CacheData
-    private lateinit var mockCall: Call
-    private lateinit var mockResponse: OkHttpResponse
+    private lateinit var context: Context
 
-    @BeforeEach
-    fun setUp() {
-        mockContext = mock(Context::class.java)
-        mockRequest = mock(Request::class.java)
-        mockCallbacks = mock(ResponseCallbacks::class.java)
-        mockCacheData = mock(CacheData::class.java)
-        mockCall = mock(Call::class.java)
-        mockResponse = mock(OkHttpResponse::class.java)
-        restClient = RestClient(mockContext, mockRequest, mockCallbacks)
-    }
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+        client = mock(OkHttpClient::class.java)
+        call = mock(Call::class.java)
+        callback = mock(MultiResponseCallback::class.java)
 
-    @AfterEach
-    fun tearDown() {
-        // Cleanup logic if needed
-    }
+        val config = ConfigBuilder()
+            .setConnectTimeout(5)
+            .setReadTimeout(5)
+            .setWriteTimeout(5)
+            .build()
 
-    @Test
-    fun `checkConnected returns true when network is connected`() {
-        val mockConnectivityManager = mock(ConnectivityManager::class.java)
-        val mockNetworkInfo = mock(NetworkInfo::class.java)
+        restClient = RestClient(context)
+        restClient.setConfig(config)
+        restClient.client = client
 
-        `when`(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(mockConnectivityManager)
-        `when`(mockConnectivityManager.activeNetworkInfo).thenReturn(mockNetworkInfo)
-        `when`(mockNetworkInfo.isConnectedOrConnecting).thenReturn(true)
-
-        val isConnected = restClient.checkConnected(mockContext)
-
-        assertTrue(isConnected)
+        request = Request.fromUrl("https://example.com", Request.Method.GET)
+        request.addHeader(Header("Accept", "application/json"))
     }
 
     @Test
-    fun `checkConnected returns false when network is not connected`() {
-        val mockConnectivityManager = mock(ConnectivityManager::class.java)
-        val mockNetworkInfo = mock(NetworkInfo::class.java)
+    fun testExecuteRequestSuccess() {
+        val responseBody =
+         """{"status":"ok"}""".toResponseBody("application/json".toMediaTypeOrNull())
+        val mockRequest = okhttp3.Request.Builder().url("https://example.com").build()
+        val okResponse = Response.Builder()
+            .code(200)
+            .protocol(Protocol.HTTP_1_1)
+            .message("OK")
+            .request(mockRequest)
+            .body(responseBody)
+            .build()
 
-        `when`(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(mockConnectivityManager)
-        `when`(mockConnectivityManager.activeNetworkInfo).thenReturn(mockNetworkInfo)
-        `when`(mockNetworkInfo.isConnectedOrConnecting).thenReturn(false)
+        `when`(client.newCall(any())).thenReturn(call)
+        doAnswer {
+            val callbackCaptor = it.getArgument<Callback>(0)
+            callbackCaptor.onResponse(call, okResponse)
+            null
+        }.`when`(call).enqueue(any())
 
-        val isConnected = restClient.checkConnected(mockContext)
+        restClient.executeRequest(request, callback)
 
-        assertFalse(isConnected)
+        verify(callback).onSuccess(any())
+        verify(callback, never()).onFailure(any())
     }
 
     @Test
-    fun `getCacheForRequest returns cache data if available`() {
-        `when`(getMethod(mockRequest)).thenReturn(GET)
-        `when`(restClient.getCacheForRequest(mockContext, mockRequest)).thenReturn(mockCacheData)
-        `when`(mockCacheData.status).thenReturn(true)
+    fun testExecuteRequestFailure() {
+        val exception = IOException("Network failure")
 
-        val cacheData = restClient.getCacheForRequest(mockContext, mockRequest)
+        `when`(client.newCall(any())).thenReturn(call)
+        doAnswer {
+            val callbackCaptor = it.getArgument<Callback>(0)
+            callbackCaptor.onFailure(call, exception)
+            null
+        }.`when`(call).enqueue(any())
 
-        Assertions.assertNotNull(cacheData)
-        assertTrue(cacheData!!.status)
+        restClient.executeRequest(request, callback)
+
+        verify(callback).onFailure(any())
+        verify(callback, never()).onSuccess(any())
     }
 
     @Test
-    fun `getCacheForRequest returns null if no cache is available`() {
-        `when`(restClient.getCacheForRequest(mockContext, mockRequest)).thenReturn(null)
+    fun testExecuteRequestSuspendSuccess() = runBlocking {
+        val responseBody =
+         """{"status":"ok"}""".toResponseBody("application/json".toMediaTypeOrNull())
+        val mockRequest = okhttp3.Request.Builder().url("https://example.com").build()
+        val okResponse = Response.Builder()
+            .code(200)
+            .protocol(Protocol.HTTP_1_1)
+            .message("OK")
+            .request(mockRequest)
+            .body(responseBody)
+            .build()
 
-        val cacheData = restClient.getCacheForRequest(mockContext, mockRequest)
+        `when`(client.newCall(any())).thenReturn(call)
+        doAnswer {
+            val callbackCaptor = it.getArgument<Callback>(0)
+            callbackCaptor.onResponse(call, okResponse)
+            null
+        }.`when`(call).enqueue(any())
 
-        Assertions.assertNull(cacheData)
+        val response = restClient.executeRequestSuspend(request)
+
+        assertEquals(200, response.statusCode)
+        assertTrue(response.isSuccessful)
+        assertEquals("{\"status\":\"ok\"}", response.responseBody)
     }
 
     @Test
-    fun `deleteCacheForRequest returns true on successful cache deletion`() {
-        `when`(restClient.deleteCacheForRequest(mockContext, mockRequest)).thenReturn(true)
+    fun testExecuteRequestSuspendFailure() = runBlocking {
+        val exception = IOException("Timeout")
 
-        val result = restClient.deleteCacheForRequest(mockContext, mockRequest)
+        `when`(client.newCall(any())).thenReturn(call)
+        doAnswer {
+            val callbackCaptor = it.getArgument<Callback>(0)
+            callbackCaptor.onFailure(call, exception)
+            null
+        }.`when`(call).enqueue(any())
 
-        assertTrue(result)
-    }
+        val response = restClient.executeRequestSuspend(request)
 
-    @Test
-    fun `deleteCacheForRequest returns false on failure to delete cache`() {
-        `when`(restClient.deleteCacheForRequest(mockContext, mockRequest)).thenReturn(false)
-
-        val result = restClient.deleteCacheForRequest(mockContext, mockRequest)
-
-        Assertions.assertFalse(result)
-    }
-
-    @Test
-    fun `execute handles successful response`() {
-        `when`(restClient.checkConnected(mockContext)).thenReturn(true)
-        `when`(getHttpUrl(mockRequest)).thenReturn("https://example.com".toHttpUrlOrNull())
-        `when`(getMethod(mockRequest)).thenReturn(GET)
-        `when`(getHeaders(mockRequest)).thenReturn(mutableListOf())
-        `when`(mockResponse.isSuccessful).thenReturn(true)
-        `when`(mockResponse.body?.string()).thenReturn("Success")
-
-        val call = restClient.execute()
-
-        Assertions.assertNotNull(call)
-    }
-
-    @Test
-    fun `execute handles failure response`() {
-        `when`(restClient.checkConnected(mockContext)).thenReturn(true)
-        `when`(getHttpUrl(mockRequest)).thenReturn("https://example.com".toHttpUrlOrNull())
-        `when`(getMethod(mockRequest)).thenReturn(GET)
-        `when`(getHeaders(mockRequest)).thenReturn(mutableListOf())
-        `when`(mockResponse.isSuccessful).thenReturn(false)
-
-        val call = restClient.execute()
-
-        Assertions.assertNotNull(call)
-    }
-
-    @Test
-    fun `execute returns null when no internet connection`() {
-        `when`(restClient.checkConnected(mockContext)).thenReturn(false)
-
-        val call = restClient.execute()
-
-        Assertions.assertNull(call)
-    }
-
-    @Test
-    fun `execute handles exception safely`() {
-        `when`(restClient.checkConnected(mockContext)).thenReturn(true)
-        `when`(getHttpUrl(mockRequest)).thenReturn("https://example.com".toHttpUrlOrNull())
-        `when`(getMethod(mockRequest)).thenReturn(GET)
-        `when`(getHeaders(mockRequest)).thenReturn(mutableListOf())
-
-        val exception = RestClientException(-1, "Test exception")
-        `when`(mockResponse.body?.string()).thenThrow(exception)
-
-        val call = restClient.execute()
-
-        Assertions.assertNotNull(call)
+        assertTrue(response.isException)
+        assertEquals("java.io.IOException: Timeout", response.statusMessage)
     }
 }

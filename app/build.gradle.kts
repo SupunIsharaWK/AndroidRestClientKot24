@@ -14,6 +14,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // ✅ Correct for JUnit 4 Android testing
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -48,15 +49,16 @@ dependencies {
 
     // Networking
     implementation(libs.okhttp)
+    implementation(libs.core.ktx)
 
-    // Unit Testing
-    testImplementation(libs.junit.jupiter) // JUnit 5 (Jupiter)
-    testImplementation(libs.kotlinx.coroutines.test) // Coroutines test library
-    testImplementation(libs.mockito.core) // Mockito for mocking
-    testImplementation(libs.mockk) // Mockk for mocking in tests
+    // ✅ Unit Testing (JUnit 4)
+    testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockk)
+    testImplementation(libs.androidx.test.runner)
+    testImplementation(libs.androidx.espresso.core)
 
-    // Android Testing
-    androidTestImplementation(libs.androidx.junit) // AndroidJUnit for Android tests
-    androidTestImplementation(libs.androidx.espresso.core) // Espresso for UI tests
-    androidTestImplementation(libs.junit.jupiter) // JUnit 5 for Android tests
+    // ✅ Android Instrumented Tests (JUnit 4)
+    androidTestImplementation(libs.bundles.android.instrumented)
 }

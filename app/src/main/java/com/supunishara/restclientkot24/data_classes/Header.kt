@@ -1,15 +1,18 @@
 package com.supunishara.restclientkot24.data_classes
 
-data class Header(val name: String, val value: String) {
-
-    override fun equals(other: Any?): Boolean {
-        val header: Header = other as Header
-        return this.name.equals(header.name, ignoreCase = true)
-    }
-
-    override fun hashCode(): Int {
-        var result = name.hashCode()
-        result = 31 * result + value.hashCode()
-        return result
-    }
-}
+/**
+ * Represents a single HTTP header as a name-value pair.
+ *
+ * This class uses value-based equality — two headers are equal if both
+ * the [name] and [value] are the same (case-sensitive by default).
+ *
+ * Example:
+ * ```
+ * Header("Authorization", "Bearer token")
+ * Header("Content-Type", "application/json")
+ * ```
+ */
+data class Header(
+    val name: String,
+    val value: String
+)

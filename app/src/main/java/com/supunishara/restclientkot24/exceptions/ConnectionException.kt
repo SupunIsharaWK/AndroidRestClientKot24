@@ -1,13 +1,16 @@
 package com.supunishara.restclientkot24.exceptions
 
-import com.supunishara.restclientkot24.exceptions.RestClientException as RestClientException
-
-class ConnectionException : RestClientException {
-    constructor(code: Int, detailMessage: String) : super(code, detailMessage)
-    constructor(code: Int, detailMessage: String, throwable: Throwable) : super(
-        code,
-        detailMessage,
-        throwable
-    )
-
-}
+/**
+ * Represents network-related exceptions such as:
+ * - Timeout
+ * - DNS failure
+ * - Connection refused
+ * - Malformed URL
+ *
+ * Subclass of [RestClientException] with specific use for connectivity issues.
+ */
+class ConnectionException(
+    code: Int,
+    detailMessage: String,
+    throwable: Throwable? = null
+) : RestClientException(code, detailMessage, throwable)

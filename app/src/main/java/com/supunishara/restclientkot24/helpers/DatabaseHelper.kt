@@ -8,8 +8,8 @@ import com.supunishara.restclientkot24.data_classes.CacheData
 import android.database.sqlite.SQLiteOpenHelper as SQLiteOpenHelper1
 
 class DatabaseHelper : SQLiteOpenHelper1 {
-    private val DATABASE_NAME: String = "restclient_lib.cache.db"
-    private val DATABASE_VERSION: Int = 1
+    private val DATABASENAME: String = "restclient_lib.cache.db"
+    private val DATABASEVERSION: Int = 1
     private var instance: DatabaseHelper? = null
 
     internal constructor(context: Context) : super(context, "restclient_lib.cache.db", null, 1)
