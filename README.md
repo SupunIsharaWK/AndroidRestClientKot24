@@ -50,7 +50,7 @@ dependencies {
 
 ```kotlin
 val request = Request.fromUrl("https://api.example.com", Request.Method.POST).apply {
-    setBody(JSONObject().put("name", "ChatGPT"))
+    setBody(JSONObject().put("name", "TestBody"))
     addHeader(Header("Authorization", "Bearer token"))
     enableResponseCaching(60000)
 }
