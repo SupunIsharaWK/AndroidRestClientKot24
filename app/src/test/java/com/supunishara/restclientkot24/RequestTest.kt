@@ -77,7 +77,8 @@ class RequestTest {
 
     @Test
     fun testSetJsonObjectBody() {
-        val json = JSONObject().put("name", "chatgpt")
+        val json = JSONObject()
+        json.put("name", "chatgpt")
         request.setBody(json)
         assertEquals(Request.BodyType.JSON, request.bodyType)
         assertTrue(request.rawBody!!.contains("chatgpt"))
@@ -85,7 +86,8 @@ class RequestTest {
 
     @Test
     fun testSetJsonArrayBody() {
-        val jsonArray = JSONArray().put("item1")
+        val jsonArray = JSONArray()
+            jsonArray.put("item1")
         request.setBody(jsonArray)
         assertEquals(Request.BodyType.JSON, request.bodyType)
         assertTrue(request.rawBody!!.contains("item1"))

@@ -14,7 +14,7 @@ mockk = "1.14.2"  # Mockk version for mocking in tests
 junit4 = "4.13.2"
 androidx-test-runner = "1.6.2"
 androidx-test-core = "1.6.1"
-coreKtxVersion = "1.6.1"
+coreKtxVersion = "1.5.0"
 
 
 [libraries]

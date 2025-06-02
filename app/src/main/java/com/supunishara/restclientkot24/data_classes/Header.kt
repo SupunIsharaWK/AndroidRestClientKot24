@@ -15,4 +15,15 @@ package com.supunishara.restclientkot24.data_classes
 data class Header(
     val name: String,
     val value: String
-)
+){
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Header) return false
+        return name.equals(other.name, true) && value == other.value
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+
+}

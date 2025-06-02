@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "RestClientKot24"
-include(":app")
-include(":app:restclientkot24")
+include(":app", ":restclientkot24")
+
