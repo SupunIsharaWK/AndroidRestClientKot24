@@ -37,13 +37,42 @@ android {
 }
 
 dependencies {
+    // Kotlin standard library
+    implementation(kotlin("stdlib"))
+
     // Core and UI libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
 
+    // DI
+    implementation(libs.hilt.android)
+    //ksp(libs.hilt.android.compiler)
+
     // Networking
     implementation(libs.okhttp)
+    // Retrofit core library
+    implementation(libs.retrofit)
+
+    // Retrofit converter for JSON serialization/deserialization (using Gson)
+    implementation(libs.converter.gson)
+
+    // Optional: RxJava support
+    implementation(libs.adapter.rxjava3)
+
+    // Optional: Kotlin Coroutines support
+    implementation(libs.retrofit2.kotlin.coroutines.adapter)
+
+
+    // Gson for JSON parsing
+    implementation(libs.gson)
+
+    // Coroutine support
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.jetbrains.kotlinx.coroutines.android)
+
+    // Logging (optional)
+    implementation(libs.okhttp3.logging.interceptor)
 
     // ✅ Unit Testing (JUnit 4)
     testImplementation(libs.junit4)
@@ -51,6 +80,9 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
     testImplementation(libs.androidx.test.core)
+
+    testImplementation(libs.okhttp3.mockwebserver)
+
 }
 
 afterEvaluate {
