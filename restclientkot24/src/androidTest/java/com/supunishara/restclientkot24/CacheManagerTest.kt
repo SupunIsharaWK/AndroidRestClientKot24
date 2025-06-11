@@ -1,7 +1,6 @@
 package com.supunishara.restclientkot24
 
 import android.content.Context
-import com.supunishara.restclientkot24.CacheManager
 import com.supunishara.restclientkot24.data_classes.CacheData
 import org.junit.Before
 import org.junit.Test
@@ -27,10 +26,10 @@ class CacheManagerTest {
    updatedAt = System.currentTimeMillis()
   )
 
-  val result = CacheManager.addCacheEntry(context, cacheData)
+  val result = com.supunishara.restclientkot24.CacheManager.addCacheEntry(context, cacheData)
   assertTrue(result == 0 || result == 1)
 
-  val retrieved = CacheManager.getCacheEntry(context, "get", "https://example.com")
+  val retrieved = com.supunishara.restclientkot24.CacheManager.getCacheEntry(context, "get", "https://example.com")
   assertNotNull(retrieved)
   assertEquals("test_response", retrieved?.data)
  }
@@ -45,12 +44,12 @@ class CacheManagerTest {
    createdAt = System.currentTimeMillis(),
    updatedAt = System.currentTimeMillis()
   )
-  CacheManager.addCacheEntry(context, initial)
+  com.supunishara.restclientkot24.CacheManager.addCacheEntry(context, initial)
 
   val updated = initial.copy(data = "new_data", updatedAt = System.currentTimeMillis())
-  CacheManager.addCacheEntry(context, updated)
+  com.supunishara.restclientkot24.CacheManager.addCacheEntry(context, updated)
 
-  val retrieved = CacheManager.getCacheEntry(context, "get", "https://example.com")
+  val retrieved = com.supunishara.restclientkot24.CacheManager.getCacheEntry(context, "get", "https://example.com")
   assertEquals("new_data", retrieved?.data)
  }
 
@@ -65,16 +64,16 @@ class CacheManagerTest {
    updatedAt = System.currentTimeMillis()
   )
 
-  CacheManager.addCacheEntry(context, cacheData)
-  val result = CacheManager.removeEntry(context, "get", "https://to-delete.com")
+  com.supunishara.restclientkot24.CacheManager.addCacheEntry(context, cacheData)
+  val result = com.supunishara.restclientkot24.CacheManager.removeEntry(context, "get", "https://to-delete.com")
   assertTrue(result >= 0)
-  val retrieved = CacheManager.getCacheEntry(context, "get", "https://to-delete.com")
+  val retrieved = com.supunishara.restclientkot24.CacheManager.getCacheEntry(context, "get", "https://to-delete.com")
   assertNull(retrieved)
  }
 
  @Test
  fun testGetCacheReturnsNullIfNotFound() {
-  val retrieved = CacheManager.getCacheEntry(context, "get", "https://nonexistent.com")
+  val retrieved = com.supunishara.restclientkot24.CacheManager.getCacheEntry(context, "get", "https://nonexistent.com")
   assertNull(retrieved)
  }
 

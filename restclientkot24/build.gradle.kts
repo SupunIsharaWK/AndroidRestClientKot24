@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -51,6 +53,12 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
     testImplementation(libs.androidx.test.core)
+
+    testImplementation(libs.androidx.test.runner)
+    testImplementation(libs.androidx.espresso.core)
+
+    // ✅ Android Instrumented Tests (JUnit 4)
+    androidTestImplementation(libs.bundles.android.instrumented)
 }
 
 afterEvaluate {
