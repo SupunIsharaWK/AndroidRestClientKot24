@@ -178,7 +178,11 @@ class RestClient(private val context: Context?) {
     suspend fun executeRequestSuspend(request: Request): Response = withContext(Dispatchers.IO) {
         // 🔁 Check persistent cache before making a network request (coroutine)
         if (request.responseCachingStatus == 1) {
-            val cached = CacheManager.getCacheEntry(context!!, request.method.name.lowercase(), request.httpUrl.toString())
+            val cached = CacheManager.getCacheEntry(
+                context!!,
+                request.method.name.lowercase(),
+                request.httpUrl.toString()
+            )
             if (cached != null) {
                 return@withContext Response().apply {
                     this.request = request
