@@ -11,11 +11,11 @@ import org.junit.Test
 
 class ResponseTest {
 
- private lateinit var response: Response
+ private lateinit var response: com.supunishara.restclientkot24.Response
 
  @Before
  fun setUp() {
-  response = Response()
+  response = com.supunishara.restclientkot24.Response()
  }
 
  @Test

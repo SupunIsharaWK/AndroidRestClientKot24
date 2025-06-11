@@ -24,9 +24,9 @@ class TempCookieJarTest {
 
     @Test
     fun testSaveAndLoadCookies() {
-        TempCookieJar.saveFromResponse(url, listOf(cookie))
+        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(cookie))
 
-        val loadedCookies = TempCookieJar.loadForRequest(url)
+        val loadedCookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(url)
         assertNotNull(loadedCookies)
         assertEquals(1, loadedCookies.size)
         assertEquals("session", loadedCookies[0].name)
@@ -36,7 +36,7 @@ class TempCookieJarTest {
     @Test
     fun testLoadForRequestReturnsEmptyIfNoCookiesSaved() {
         val newUrl = "https://another.com".toHttpUrlOrNull()!!
-        val cookies = TempCookieJar.loadForRequest(newUrl)
+        val cookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(newUrl)
         assertNotNull(cookies)
         assertTrue(cookies.isEmpty())
     }
@@ -49,10 +49,10 @@ class TempCookieJarTest {
             .domain("example.com")
             .build()
 
-        TempCookieJar.saveFromResponse(url, listOf(cookie))
-        TempCookieJar.saveFromResponse(url, listOf(newCookie)) // overwrite
+        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(cookie))
+        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(newCookie)) // overwrite
 
-        val cookies = TempCookieJar.loadForRequest(url)
+        val cookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(url)
         assertEquals(1, cookies.size)
         assertEquals("xyz789", cookies[0].value)
     }
