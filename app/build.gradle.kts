@@ -29,12 +29,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 
     buildToolsVersion = "35.0.0"
@@ -49,7 +49,7 @@ dependencies {
 
     // Networking
     implementation(libs.okhttp)
-    implementation(libs.core.ktx)
+    //implementation(libs.core.ktx)
 
     // ✅ Unit Testing (JUnit 4)
     testImplementation(libs.junit4)
@@ -61,4 +61,6 @@ dependencies {
 
     // ✅ Android Instrumented Tests (JUnit 4)
     androidTestImplementation(libs.bundles.android.instrumented)
+
+    implementation("com.github.SupunIsharaWK:restclientkot24:1.0.5")
 }

@@ -16,6 +16,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://maven.pkg.github.com/SupunIsharaWK/AndroidRestClientKot24")
+            credentials {
+                username = providers.gradleProperty("gpr.user").orElse(System.getenv("USERNAME")).get()
+                password = providers.gradleProperty("gpr.key").orElse(System.getenv("TOKEN")).get()
+            }
+        }
     }
 }
 
