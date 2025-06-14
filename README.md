@@ -2,7 +2,7 @@
 
 **RestClientKot24** is a modern, extensible, and testable REST client library built in Kotlin using OkHttp. It wraps complex HTTP handling into a fluent, configurable API designed for Android and JVM-based apps.
 
-> 🔖 **Version 1.0.5** – Initial public release published via GitHub Packages.
+> 🔖 **Version 1.0.2** – Initial public release published via GitHub Packages.
 
 ---
 
@@ -52,7 +52,7 @@ In your app-level build.gradle.kts:
 
 ```bash
 dependencies {
-    implementation("com.github.SupunIsharaWK:restclientkot24:1.0.3")
+    implementation("com.github.SupunIsharaWK:restclientkot24:1.0.2")
 }
 ```
 💡 Don’t forget to define gpr.user and gpr.key in your ~/.gradle/gradle.properties.
