@@ -75,7 +75,7 @@ fun getGitTagVersion(): String {
         standardOutput = dirty
     }
 
-    return if (dirty.toString().isBlank()) tag else "$tag-dirty"
+    return if (dirty.toString().isBlank()) tag else tag
 }
 
 
