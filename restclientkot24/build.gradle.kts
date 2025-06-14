@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION")
+import java.io.ByteArrayOutputStream
 
 plugins {
     alias(libs.plugins.android.library)
@@ -26,12 +26,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 
     buildToolsVersion = "35.0.0"
@@ -61,6 +61,16 @@ dependencies {
     androidTestImplementation(libs.bundles.android.instrumented)
 }
 
+fun getGitVersion(): String {
+    val stdout = ByteArrayOutputStream()
+    exec {
+        commandLine = listOf("git", "describe", "--tags", "--always")
+        standardOutput = stdout
+    }
+    return stdout.toString().trim().removePrefix("v")
+}
+
+
 afterEvaluate {
     publishing {
         publications {
@@ -68,8 +78,15 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.SupunIsharaWK"
                 artifactId = "restclientkot24"
-                version = "1.0.0"
+                version = getGitVersion() // ← must be a fresh version
             }
+
+//            create<MavenPublication>("debug") {
+//                from(components["debug"])
+//                groupId = "com.github.SupunIsharaWK"
+//                artifactId = "restclientkot24"
+//                version = "1.0.5" // ← same fresh version
+//            }
         }
 
         repositories {
