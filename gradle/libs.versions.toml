@@ -16,6 +16,7 @@ androidx-junit = "1.1.5"
 androidx-test-runner = "1.6.2"
 androidx-test-core = "1.6.1"
 coreKtxVersion = "1.5.0"
+restclientkot24 = "1.0.5"
 
 
 [libraries]
@@ -34,6 +35,8 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "coreKtxVersion" }
+
+restclientkot24 = { module = "com.github.SupunIsharaWK:RestClientKot24", version.ref = "restclientkot24" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

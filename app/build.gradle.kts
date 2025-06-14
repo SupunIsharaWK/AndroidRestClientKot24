@@ -29,12 +29,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildToolsVersion = "35.0.0"
@@ -62,5 +62,5 @@ dependencies {
     // ✅ Android Instrumented Tests (JUnit 4)
     androidTestImplementation(libs.bundles.android.instrumented)
 
-    implementation("com.github.SupunIsharaWK:restclientkot24:1.0.5")
+    implementation(libs.restclientkot24)
 }
