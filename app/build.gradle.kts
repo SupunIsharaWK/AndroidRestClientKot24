@@ -62,5 +62,5 @@ dependencies {
     // ✅ Android Instrumented Tests (JUnit 4)
     androidTestImplementation(libs.bundles.android.instrumented)
 
-    implementation("com.github.SupunIsharaWK:restclientkot24:1.0.5")
+    implementation(libs.restclientkot24)
 }
