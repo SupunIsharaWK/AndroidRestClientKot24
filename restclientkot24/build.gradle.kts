@@ -86,7 +86,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.SupunIsharaWK"
                 artifactId = "restclientkot24"
-                version = getGitVersion() // ← must be a fresh version
+                version = getGitTagVersion() // ← must be a fresh version
             }
 
 //            create<MavenPublication>("debug") {
