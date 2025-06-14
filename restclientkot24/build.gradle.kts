@@ -61,13 +61,21 @@ dependencies {
     androidTestImplementation(libs.bundles.android.instrumented)
 }
 
-fun getGitVersion(): String {
+fun getGitTagVersion(): String {
     val stdout = ByteArrayOutputStream()
     exec {
-        commandLine = listOf("git", "describe", "--tags", "--always")
+        commandLine = listOf("git", "describe", "--tags", "--abbrev=0")
         standardOutput = stdout
     }
-    return stdout.toString().trim().removePrefix("v")
+    val tag = stdout.toString().trim().removePrefix("v")
+
+    val dirty = ByteArrayOutputStream()
+    exec {
+        commandLine = listOf("git", "status", "--porcelain")
+        standardOutput = dirty
+    }
+
+    return if (dirty.toString().isBlank()) tag else "$tag-dirty"
 }
 
 
@@ -78,7 +86,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.SupunIsharaWK"
                 artifactId = "restclientkot24"
-                version = getGitVersion() // ← must be a fresh version
+                version = getGitTagVersion() // ← must be a fresh version
             }
 
 //            create<MavenPublication>("debug") {
