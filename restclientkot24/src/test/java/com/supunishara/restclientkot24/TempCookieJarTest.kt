@@ -6,7 +6,16 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import kotlin.intArrayOf
 
+@RunWith(RobolectricTestRunner::class)
+@Config(
+    sdk = [28],
+    manifest = Config.NONE
+)  //@Config(sdk = [33]) // or any API level you want to simulate
 class TempCookieJarTest {
 
     private lateinit var url: HttpUrl
@@ -24,9 +33,9 @@ class TempCookieJarTest {
 
     @Test
     fun testSaveAndLoadCookies() {
-        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(cookie))
+        TempCookieJar.saveFromResponse(url, listOf(cookie))
 
-        val loadedCookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(url)
+        val loadedCookies = TempCookieJar.loadForRequest(url)
         assertNotNull(loadedCookies)
         assertEquals(1, loadedCookies.size)
         assertEquals("session", loadedCookies[0].name)
@@ -36,7 +45,7 @@ class TempCookieJarTest {
     @Test
     fun testLoadForRequestReturnsEmptyIfNoCookiesSaved() {
         val newUrl = "https://another.com".toHttpUrlOrNull()!!
-        val cookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(newUrl)
+        val cookies = TempCookieJar.loadForRequest(newUrl)
         assertNotNull(cookies)
         assertTrue(cookies.isEmpty())
     }
@@ -49,10 +58,13 @@ class TempCookieJarTest {
             .domain("example.com")
             .build()
 
-        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(cookie))
-        com.supunishara.restclientkot24.TempCookieJar.saveFromResponse(url, listOf(newCookie)) // overwrite
+        TempCookieJar.saveFromResponse(url, listOf(cookie))
+        TempCookieJar.saveFromResponse(
+            url,
+            listOf(newCookie)
+        ) // overwrite
 
-        val cookies = com.supunishara.restclientkot24.TempCookieJar.loadForRequest(url)
+        val cookies = TempCookieJar.loadForRequest(url)
         assertEquals(1, cookies.size)
         assertEquals("xyz789", cookies[0].value)
     }

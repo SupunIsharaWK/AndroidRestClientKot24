@@ -11,13 +11,20 @@ import com.supunishara.restclientkot24.callbacks.ProgressCallbacks
 import com.supunishara.restclientkot24.data_classes.CacheData
 import com.supunishara.restclientkot24.exceptions.ConnectionException
 import com.supunishara.restclientkot24.exceptions.RestClientException
+import com.supunishara.restclientkot24.utils.NetworkUtil.isConnected
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
-import java.net.*
+import java.net.ConnectException
+import java.net.MalformedURLException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import javax.net.ssl.X509TrustManager
@@ -36,6 +43,7 @@ class RestClient(private val context: Context?) {
 
     /**
      * Assign a custom client configuration.
+     * check the connection as part of the configuration settings.
      */
     fun setConfig(config: RestClientConfig) {
         this.clientConfig = config
@@ -56,7 +64,7 @@ class RestClient(private val context: Context?) {
         request: Request,
         multiCallback: MultiResponseCallback? = null,
         progressCallback: ProgressCallbacks? = null,
-        simpleCallback: ((Response) -> Unit)? = null
+        simpleCallback: ((Response) -> Unit)? = null,
     ): Call? {
         val response = Response().apply { this.request = request }
 
@@ -195,7 +203,8 @@ class RestClient(private val context: Context?) {
         val response = Response().apply { this.request = request }
 
         if (!isConnected()) {
-            response.exception = ConnectionException(Result.NOT_CONNECTED_TO_INTERNET, "Not connected to internet")
+            response.exception =
+                ConnectionException(Result.NOT_CONNECTED_TO_INTERNET, "Not connected to internet")
             return@withContext response
         }
 
@@ -239,7 +248,8 @@ class RestClient(private val context: Context?) {
             response
 
         } catch (e: Throwable) {
-            response.exception = RestClientException(Result.GENERIC_EXCEPTION, e.message ?: "Unknown", e)
+            response.exception =
+                RestClientException(Result.GENERIC_EXCEPTION, e.message ?: "Unknown", e)
             response
         }
     }
@@ -263,14 +273,14 @@ class RestClient(private val context: Context?) {
                 @SuppressLint("TrustAllX509TrustManager")
                 override fun checkClientTrusted(
                     chain: Array<java.security.cert.X509Certificate>,
-                    authType: String
+                    authType: String,
                 ) {
                 }
 
                 @SuppressLint("TrustAllX509TrustManager")
                 override fun checkServerTrusted(
                     chain: Array<java.security.cert.X509Certificate>,
-                    authType: String
+                    authType: String,
                 ) {
                 }
             }
@@ -346,15 +356,14 @@ class RestClient(private val context: Context?) {
         }
     }
 
-    private fun isConnected(): Boolean {
-        //val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        //return cm?.activeNetworkInfo?.isConnectedOrConnecting == true
-
+    fun isConnected(): Boolean {
+        /*
         val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val network = connectivityManager?.activeNetwork
         val capabilities = connectivityManager?.getNetworkCapabilities(network)
         return capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-
+        */
+        return isConnected(context)
     }
 
     private fun log(message: String?) {

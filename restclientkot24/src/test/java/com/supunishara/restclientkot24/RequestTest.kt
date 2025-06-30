@@ -8,20 +8,28 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(
+    sdk = [28],
+    manifest = Config.NONE
+)  //@Config(sdk = [33]) // or any API level you want to simulate
 class RequestTest {
 
-    private lateinit var request: com.supunishara.restclientkot24.Request
+    private lateinit var request: Request
 
     @Before
     fun setUp() {
-        request = com.supunishara.restclientkot24.Request.fromUrl("https://api.example.com", com.supunishara.restclientkot24.Request.Method.POST)
+        request = Request.fromUrl("https://api.example.com", Request.Method.POST)
     }
 
     @Test
     fun testDefaultState() {
-        assertEquals(com.supunishara.restclientkot24.Request.Method.POST, request.method)
-        assertEquals(com.supunishara.restclientkot24.Request.BodyType.EMPTY, request.bodyType)
+        assertEquals(Request.Method.POST, request.method)
+        assertEquals(Request.BodyType.EMPTY, request.bodyType)
         assertTrue(request.getHeaders().isEmpty())
         assertEquals(0, request.connectTimeout)
         assertEquals(0, request.readTimeout)
@@ -67,49 +75,53 @@ class RequestTest {
 
     @Test
     fun testSetRawTextBody() {
-        request.setBody("hello world", com.supunishara.restclientkot24.Request.BodyType.TEXT)
+        request.setBody("hello world", Request.BodyType.TEXT)
         assertEquals("hello world", request.rawBody)
-        assertEquals(com.supunishara.restclientkot24.Request.BodyType.TEXT, request.bodyType)
+        assertEquals(Request.BodyType.TEXT, request.bodyType)
         assertTrue(
             request.getHeaders()
-                .any { it.name.equals("Content-Type", true) && it.value.contains("text/plain") })
+                .any { it.name.equals("Content-Type", true) && it.value.contains("text/plain") }
+        )
     }
 
-//    @Test
-//    fun testSetJsonObjectBody() {
-//        val json = JSONObject()
-//        json.put("name", "chatgpt")
-//        request.setBody(json)
-//        assertEquals(com.supunishara.restclientkot24.Request.BodyType.JSON, request.bodyType)
-//        assertTrue(request.rawBody!!.contains("chatgpt"))
-//    }
-//
-//    @Test
-//    fun testSetJsonArrayBody() {
-//        val jsonArray = JSONArray()
-//            jsonArray.put("item1")
-//        request.setBody(jsonArray)
-//        assertEquals(com.supunishara.restclientkot24.Request.BodyType.JSON, request.bodyType)
-//        assertTrue(request.rawBody!!.contains("item1"))
-//    }
+    @Test
+    fun testSetJsonObjectBody() {
+        val json = JSONObject()
+        json.put("name", "supun ishara")
+        request.setBody(json)
+        assertEquals(Request.BodyType.JSON, request.bodyType)
+        assertTrue(request.rawBody!!.contains("supun ishara"))
+    }
+
+    @Test
+    fun testSetJsonArrayBody() {
+        val jsonArray = JSONArray()
+        jsonArray.put("item1")
+        request.setBody(jsonArray)
+        assertEquals(Request.BodyType.JSON, request.bodyType)
+        assertTrue(request.rawBody!!.contains("item1"))
+    }
 
     @Test
     fun testSetFormBody() {
         val form = FormBody.Builder().add("key", "value").build()
         request.setBody(form)
-        assertEquals(com.supunishara.restclientkot24.Request.BodyType.X_FORM_URL_ENCODED, request.bodyType)
+        assertEquals(Request.BodyType.X_FORM_URL_ENCODED, request.bodyType)
         assertNotNull(request.formBody)
     }
 
-//    @Test
-//    fun testSetMultipartBody() {
-//        val multipart = MultipartBody.Builder().setType(MultipartBody.FORM).build()
-//        request.setBody(multipart)
-//        assertEquals(com.supunishara.restclientkot24.Request.BodyType.MULTIPART, request.bodyType)
-//    }
+    @Test
+    fun testSetMultipartBody() {
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("key", "value") // ✅ Add a dummy form part
+            .build()
+        request.setBody(multipart)
+        assertEquals(Request.BodyType.MULTIPART, request.bodyType)
+    }
 
     @Test(expected = IllegalArgumentException::class)
     fun testFromUrlFailsOnInvalidUrl() {
-        com.supunishara.restclientkot24.Request.fromUrl("not-a-url", com.supunishara.restclientkot24.Request.Method.GET)
+        Request.fromUrl("not-a-url", Request.Method.GET)
     }
 }

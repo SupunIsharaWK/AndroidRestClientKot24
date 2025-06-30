@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("maven-publish") // ✅ Required for publishing
+    id("jacoco") // ✅ Required for test coverage report
 }
 
 android {
@@ -25,6 +26,16 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.all {
+            it.useJUnit()
+            it.extensions.configure<JacocoTaskExtension> {
+                // Required for Robolectric support
+                isIncludeNoLocationClasses = true
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -36,6 +47,10 @@ android {
 
     buildToolsVersion = "35.0.0"
     ndkVersion = "27.1.12297006"
+}
+
+jacoco {
+    toolVersion = "0.8.11" // ✅ Define here
 }
 
 dependencies {
@@ -50,15 +65,23 @@ dependencies {
     // ✅ Unit Testing (JUnit 4)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
+    // ✅ Unit Testing (mockito)
     testImplementation(libs.mockito.core)
-    testImplementation(libs.mockk)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.mockito.inline)
+    // ✅ Unit Testing (androidx and espresso)
     testImplementation(libs.androidx.test.core)
-
     testImplementation(libs.androidx.test.runner)
     testImplementation(libs.androidx.espresso.core)
 
     // ✅ Android Instrumented Tests (JUnit 4)
     androidTestImplementation(libs.bundles.android.instrumented)
+
+    testImplementation (libs.robolectric) // or latest version
+
+    // Kotlin test helpers (optional)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.mockk)
 }
 
 fun getGitTagVersion(): String {
@@ -89,12 +112,16 @@ afterEvaluate {
                 version = getGitTagVersion() // ← must be a fresh version
             }
 
-//            create<MavenPublication>("debug") {
-//                from(components["debug"])
-//                groupId = "com.github.SupunIsharaWK"
-//                artifactId = "restclientkot24"
-//                version = "1.0.5" // ← same fresh version
-//            }
+            /**
+             * this must be enabled when it is required to publish debug version,
+             * until then keep it commented
+             */
+            /*create<MavenPublication>("debug") {
+                from(components["debug"])
+                groupId = "com.github.SupunIsharaWK"
+                artifactId = "restclientkot24"
+                version = "1.0.5" // ← same fresh version
+            }*/
         }
 
         repositories {
@@ -109,3 +136,34 @@ afterEvaluate {
         }
     }
 }
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    classDirectories.setFrom(
+        fileTree("${buildDir}/intermediates/javac/debug") {
+            include("**/com/supunishara/**")
+            exclude("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+        }
+    )
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(fileTree(buildDir) {
+        include("jacoco/testDebugUnitTest.exec")
+    })
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs("--add-opens=java.base/jdk.internal.reflect=ALL-UNNAMED")
+
+    // Enable JaCoCo
+    extensions.configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
